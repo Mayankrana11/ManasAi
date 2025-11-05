@@ -1,3 +1,4 @@
+// backend/server.js
 import express from "express";
 import cors from "cors";
 import fs from "fs";
@@ -11,22 +12,30 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// ✅ Initialize Firebase
-const serviceAccount = JSON.parse(
-  fs.readFileSync("./manas-plus-firebase-adminsdk.json", "utf8")
-);
+// ✅ Initialize Firebase using .env for safety
+try {
+  const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || "./manas-plus-firebase-adminsdk.json";
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  if (!fs.existsSync(serviceAccountPath)) {
+    throw new Error(`Firebase service account file not found at ${serviceAccountPath}`);
+  }
+
+  const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
+
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  }
+
+  console.log("🔥 Connected to Firebase Firestore");
+} catch (error) {
+  console.error("❌ Firebase initialization failed:", error.message);
 }
 
 const db = admin.firestore();
 const chatsRef = db.collection("chats");
 const profilesRef = db.collection("profiles");
-
-console.log("🔥 Connected to Firebase Firestore");
 
 const MODEL = "llama3:latest";
 const OLLAMA_API = "http://localhost:11434/api/generate";
@@ -36,11 +45,9 @@ console.log("🤖 Connected model:", MODEL);
 function enhanceWithEmojis(text) {
   let t = text;
 
-  // Remove markdown-like bold/italic markers
   t = t.replace(/\*\*(.*?)\*\*/g, "$1");
   t = t.replace(/\*(.*?)\*/g, "$1");
 
-  // Add emojis for common terms
   t = t.replace(/\b(headache|pain|migraine)\b/gi, "😣 $1");
   t = t.replace(/\b(fever|temperature|flu)\b/gi, "🤒 $1");
   t = t.replace(/\b(stress|anxiety|tension)\b/gi, "😟 $1");
@@ -53,7 +60,6 @@ function enhanceWithEmojis(text) {
   t = t.replace(/\b(diet|food|nutrition)\b/gi, "🥗 $1");
   t = t.replace(/\b(exercise|walk|yoga)\b/gi, "🏃 $1");
 
-  // Add friendly sign-offs or soft tone at the end
   if (!t.trim().endsWith("❤️")) {
     t += "\n\n💚 Take care! I'm here if you want to discuss this further.";
   }
@@ -111,19 +117,13 @@ Response:`,
         const json = JSON.parse(line);
         if (json.response) botReply += json.response;
       } catch {
-        // ignore broken JSON chunks
+        // Ignore broken JSON chunks
       }
     }
 
-    botReply = botReply.trim();
-    if (!botReply) {
-      botReply = "I'm sorry, I couldn’t process that right now. Please try again.";
-    }
-
-    // Beautify reply with emojis
+    botReply = botReply.trim() || "I'm sorry, I couldn’t process that right now. Please try again.";
     const enhancedReply = enhanceWithEmojis(botReply);
 
-    // Save to Firestore
     await chatsRef.add({
       sessionId,
       userText,
