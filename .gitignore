@@ -1,0 +1,17 @@
+# Node modules
+node_modules/
+
+# Environment files
+.env
+
+# Firebase credentials (DO NOT upload)
+backend/manas-plus-firebase-adminsdk.json
+
+# Build files
+dist/
+.next/
+build/
+
+# System files
+.DS_Store
+Thumbs.db
