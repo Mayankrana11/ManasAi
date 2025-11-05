@@ -101,7 +101,7 @@ http://localhost:5173
 If you don’t want to run commands manually, just double-click the batch file provided in the root directory:
 
 ```
-start_manas_plus.bat
+run_server.bat
 ```
 
 This will:
