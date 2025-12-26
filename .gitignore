@@ -6,6 +6,8 @@ node_modules/
 
 # Firebase credentials (DO NOT upload)
 backend/manas-plus-firebase-adminsdk.json
+backend/.env
+backend/.env.local
 
 # Build files
 dist/
@@ -14,12 +16,6 @@ build/
 
 # Extras folder
 extras/
-
-# Videos & large binary files
-videos/
-*.mp4
-*.zip
-*.pptx
 
 # System files
 .DS_Store
