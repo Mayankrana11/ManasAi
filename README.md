@@ -1,62 +1,79 @@
-# 🩺 Manas+ — Your Personal Health Companion
+# 🩺 Manas+ — AI Health Companion
 
-**Manas+** is an AI-powered health assistant built with **React, Node.js, Firebase**, and **LLaMA 3 (via Ollama)**.  
-It provides empathetic, emoji-rich health guidance, maintains chat history, and stores user profiles securely — all while being lightweight and offline-compatible.
+**Manas+** is a full-stack AI-powered health companion built with **React, Node.js, Firebase**, and **LLaMA 3 (via Ollama)**.  
+It combines empathetic AI chat, health monitoring features, user profiles, and a clean modern UI — designed for extensibility with authentication, subscriptions, and real-world deployment in mind.
 
 ---
 
 ## 🌸 Features
 
-- 💬 **AI Chat** — Natural conversations with a warm, friendly tone.  
-- 🧠 **LLaMA 3 (Ollama)** — Local AI inference, no external API keys needed.  
-- 🔊 **Speech Recognition** — Hands-free interaction with auto-send.  
-- 🕒 **Chat History** — Stored securely in Firebase Firestore.  
-- 👤 **Profile Management** — Persistent user info and health score.  
-- 🌐 **Responsive UI** — Built using React + TailwindCSS.  
-- 🖥️ **One-Click Startup** — Batch script to launch backend + AI automatically.  
+- 💬 **AI Chat Assistant** — Friendly, empathetic health conversations  
+- 🧠 **LLaMA 3 (Ollama)** — Local AI inference (no external API keys required)  
+- 🔐 **Authentication System (Temporary)**  
+  - Admin login (full access)  
+  - Guest mode (limited access)  
+- 🔒 **Feature Locking for Guests** — Only Chat & Profile accessible  
+- 👤 **Professional Profile Page** — Account type, plan, billing placeholders  
+- 🧾 **Subscription Flow (UI Ready)** — Payment page placeholder  
+- 🕒 **Chat History & Profiles** — Firebase-ready backend structure  
+- 🌐 **Modern UI** — React + TailwindCSS + Lucide icons  
 
 ---
 
-## ⚙️ **Setup Instructions**
+## 🔑 Authentication (Testing Only)
+
+> ⚠️ **Temporary hard-coded auth for development & UI testing**
+
+### Admin Login
+```
+Username: admin
+Password: admin123
+```
+
+### Guest Mode
+- Click **“Continue without account”**
+- Access limited to:
+  - ✅ Chat
+  - ✅ Profile
+- Other features redirect to **Subscription Required** page
+
+> 🔐 This will later be replaced with Firebase Auth / Clerk.
+
+---
+
+## ⚙️ Setup Instructions
 
 ### 🪄 Step 1: Prerequisites
 
-Make sure you have these installed:
-
-| Tool | Version | Download |
-|------|----------|-----------|
-| **Node.js** | ≥ 18.x | [https://nodejs.org](https://nodejs.org) |
-| **Ollama** | Latest | [https://ollama.com/download](https://ollama.com/download) |
-| **Git** | Latest | [https://git-scm.com/downloads](https://git-scm.com/downloads) |
-| **Firebase Project** | Any | [https://console.firebase.google.com](https://console.firebase.google.com) |
+| Tool | Version |
+|-----|--------|
+| Node.js | ≥ 18.x |
+| Ollama | Latest |
+| Git | Latest |
+| Firebase Project | Any |
 
 ---
 
-### 🤖 Step 2: Install & Run **LLaMA 3** Model
+### 🤖 Step 2: Install & Run LLaMA 3
 
-After installing Ollama, open a terminal and run:
-
+```bash
 ollama pull llama3
-
-
-Then to start the Ollama service:
-
 ollama serve
+```
 
-
-Keep this running — it powers the Manas+ AI backend.
+Keep Ollama running — it powers the Manas+ AI backend.
 
 ---
 
-### 🔥 Step 3: Firebase Setup
+### 🔥 Step 3: Firebase Setup (Backend Ready)
 
-1. Go to your Firebase Console → **Project Settings → Service Accounts → Generate new private key**  
-2. Download the JSON file (it will look like `yourproject-firebase-adminsdk.json`)  
-3. Place it in your project under:
+1. Firebase Console → Project Settings → Service Accounts  
+2. Generate **Admin SDK private key**
+3. Place the file at:
    ```
-   /backend/manas-plus-firebase-adminsdk.json
+   backend/manas-plus-firebase-adminsdk.json
    ```
-4. Make sure your `.gitignore` includes:
+4. Add to `.gitignore`:
    ```
    backend/manas-plus-firebase-adminsdk.json
    .env
@@ -66,14 +83,13 @@ Keep this running — it powers the Manas+ AI backend.
 
 ### 🧠 Step 4: Backend Setup
 
-In your terminal:
 ```bash
 cd backend
 npm install
 node server.js
 ```
 
-If Ollama is running, your backend will start at:
+Backend runs at:
 ```
 http://localhost:5000
 ```
@@ -82,82 +98,74 @@ http://localhost:5000
 
 ### 💻 Step 5: Frontend Setup
 
-In a new terminal:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Then open the local web app in your browser:
+Open:
 ```
 http://localhost:5173
 ```
 
 ---
 
-## 🧩 **Quick Start (Recommended)**
-
-If you don’t want to run commands manually, just double-click the batch file provided in the root directory:
-
-```
-run_server.bat
-```
-
-This will:
-- ✅ Start Ollama service (if not running)
-- ✅ Load the LLaMA 3 model
-- ✅ Launch the backend server automatically  
-
-Frontend is already hosted online (see below).
-
----
-
-## 🌐 **Live Web App**
-
-You can access the deployed frontend here:  
-👉 **[ManasAi on Netlify](https://inspiring-melomakarona-ba2e01.netlify.app/)**  
-
----
-
-## 🧱 **Project Structure**
+## 🧩 Project Structure (Simplified)
 
 ```
 manas-plus-project/
 │
 ├── backend/
-│   ├── server.js                # Node.js + Firebase + Ollama API backend
-│   ├── manas-plus-firebase-adminsdk.json  # Firebase service key (local only)
-│   └── package.json
+│   ├── server.js                       # Node.js + Firebase + Ollama backend
+│   ├── package.json
+│   └── manas-plus-firebase-adminsdk.json (local only) 
 │
 ├── frontend/
 │   ├── src/
-│   │   └── App.jsx              # React frontend (chat, history, profile)
+│   │   ├── components/                 # Sidebar, Nav buttons, UI components
+│   │   ├── pages/                      # Chat, Profile, Auth, Payment, etc.
+│   │   └── App.jsx                     # App shell + auth + routing logic
 │   ├── package.json
 │   └── vite.config.js
 │
-├── start_manas_plus.bat         # One-click startup script
-├── .gitignore                   # Keeps sensitive files private
+├── run_server.bat                      # One-click backend + Ollama startup
+├── .gitignore
 └── README.md
 ```
 
 ---
 
-## 🔐 **Security Notes**
+## 🚧 Current Limitations
 
-- ⚠️ Never upload `manas-plus-firebase-adminsdk.json` or `.env` to GitHub.  
-- 🔒 Firestore is protected via Firebase rules — only Manas+ can read/write securely.  
-- 🧠 Ollama runs entirely offline — no data leaves your device.
-
----
-
-## ❤️ **Credits**
-
-- 🧠 AI Model — [LLaMA 3](https://ollama.com/library/llama3) via Ollama  
-- ☁️ Database — [Firebase Firestore](https://firebase.google.com/)  
-- ⚛️ Frontend — [React + TailwindCSS](https://react.dev/)  
-- 🧩 Backend — Node.js + Express  
+- Temporary hard-coded authentication
+- Payment flow is UI-only
+- Profile data is mock/local
+- Firebase Auth integration planned
 
 ---
 
-✨ *Built with care by Mayank Rana & Mukul*
+## 🌐 Live Frontend
+
+👉 https://inspiring-melomakarona-ba2e01.netlify.app/
+
+---
+
+## 🔐 Security Notes
+
+- Never commit Firebase Admin SDK keys
+- Ollama runs fully offline
+- Development build of React is used
+
+---
+
+## ❤️ Credits
+
+- AI Model — LLaMA 3 via Ollama  
+- Frontend — React + TailwindCSS  
+- Backend — Node.js + Express  
+- Database — Firebase Firestore  
+
+---
+
+✨ Built with care by Mayank Rana & Mukul
