@@ -1,52 +1,82 @@
 import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { LogOut, Shield, User } from "lucide-react";
 
 function ProfilePage() {
-  const [profile, setProfile] = useState({ name: "", email: "", age: "", healthScore: "" });
-  const sessionId = localStorage.getItem("manasSession");
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      const res = await fetch(`http://localhost:5000/api/profile/${sessionId}`);
-      const data = await res.json();
-      if (data) setProfile(data);
-    };
-    fetchProfile();
-  }, [sessionId]);
+    const storedUser = localStorage.getItem("manas_user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
 
-  const saveProfile = async () => {
-    await fetch(`http://localhost:5000/api/profile/${sessionId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(profile),
-    });
-    alert("Profile saved successfully!");
+  if (!user) {
+    return (
+      <div className="text-center text-gray-500 mt-20">
+        Loading profile…
+      </div>
+    );
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem("manas_auth");
+    localStorage.removeItem("manas_user");
+    window.location.reload(); // clean reset
   };
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
-      <h1 className="text-3xl font-extrabold text-gray-800 mb-6">Your Profile</h1>
-      <div className="grid grid-cols-2 gap-6">
-        {["name", "email", "age", "healthScore"].map((field) => (
-          <div key={field}>
-            <label className="block text-sm font-medium text-gray-600 capitalize mb-1">
-              {field === "healthScore" ? "Health Score (%)" : field}
-            </label>
-            <input
-              type={field === "age" || field === "healthScore" ? "number" : "text"}
-              value={profile[field] || ""}
-              onChange={(e) => setProfile({ ...profile, [field]: e.target.value })}
-              className="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-300 outline-none"
-            />
+      {/* Header */}
+      <div className="flex items-center gap-6 mb-8">
+        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-blue-400 flex items-center justify-center text-white text-3xl font-bold">
+          {user.name?.charAt(0)}
+        </div>
+
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-800">
+            {user.name}
+          </h1>
+          <p className="text-gray-500">{user.email}</p>
+
+          <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 text-sm font-medium">
+            <Shield size={14} />
+            {user.plan}
           </div>
-        ))}
+        </div>
       </div>
-      <button
-        onClick={saveProfile}
-        className="mt-6 bg-gradient-to-r from-green-400 to-blue-400 text-white px-6 py-2 rounded-full font-semibold flex items-center gap-2 hover:opacity-90"
-      >
-        <Save size={18} /> Save Changes
-      </button>
+
+      {/* Info Grid */}
+      <div className="grid md:grid-cols-2 gap-6 mb-10">
+        <div className="bg-gray-50 p-5 rounded-xl border">
+          <p className="text-sm text-gray-500 mb-1">Account Type</p>
+          <p className="font-semibold text-gray-800 capitalize">
+            {user.role}
+          </p>
+        </div>
+
+        <div className="bg-gray-50 p-5 rounded-xl border">
+          <p className="text-sm text-gray-500 mb-1">Next Billing Date</p>
+          <p className="font-semibold text-gray-800">
+            {user.nextBilling}
+          </p>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex justify-between items-center">
+        <div className="text-sm text-gray-500">
+          Profile management will be synced with secure authentication later.
+        </div>
+
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-5 py-2 rounded-full bg-red-50 text-red-600 hover:bg-red-100 font-semibold"
+        >
+          <LogOut size={16} />
+          Logout
+        </button>
+      </div>
     </div>
   );
 }
