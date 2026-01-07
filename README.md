@@ -147,7 +147,7 @@ manas-plus-project/
 
 ## 🌐 Live Frontend
 
-👉 https://inspiring-melomakarona-ba2e01.netlify.app/
+👉 https://manas-plus.netlify.app/
 
 ---
 
