@@ -25,6 +25,7 @@ import ElderPage from "./pages/ElderPage";
 import EmergencyPage from "./pages/EmergencyPage";
 import HistoryPage from "./pages/HistoryPage";
 import ProfilePage from "./pages/ProfilePage";
+import "leaflet/dist/leaflet.css";
 
 import AuthPage from "./pages/AuthPage";
 import PaymentPage from "./pages/PaymentPage";

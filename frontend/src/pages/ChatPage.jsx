@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Send, Camera } from "lucide-react";
+import { Mic, Send, Camera, RotateCcw, Loader2, Sparkles, BrainCircuit } from "lucide-react";
 import StartingUI from "../components/StartingUI";
 
-// ✅ Chat Page
 function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [listening, setListening] = useState(false);
   const [spokenText, setSpokenText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
 
   const recognitionRef = useRef(null);
   const silenceTimerRef = useRef(null);
@@ -26,8 +26,7 @@ function ChatPage() {
 
   /* ---------------- SPEECH RECOGNITION ---------------- */
   useEffect(() => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
@@ -46,7 +45,7 @@ function ChatPage() {
       silenceTimerRef.current = setTimeout(() => {
         recognition.stop();
         setListening(false);
-        if (transcript.trim()) handleVoiceSend(transcript.trim());
+        if (transcript.trim()) sendMessage(transcript.trim());
       }, 1500);
     };
 
@@ -54,15 +53,9 @@ function ChatPage() {
     recognitionRef.current = recognition;
   }, []);
 
-  const handleVoiceSend = (text) => {
-    setInput(text);
-    sendMessage(text);
-    setSpokenText("");
-  };
-
   const toggleListening = () => {
     const recognition = recognitionRef.current;
-    if (!recognition) return alert("Speech recognition not supported.");
+    if (!recognition) return;
     if (!listening) {
       setSpokenText("");
       recognition.start();
@@ -73,205 +66,168 @@ function ChatPage() {
     }
   };
 
-  /* ---------------- IMAGE HANDLING ---------------- */
-  const handleImageClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleImageSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const imageURL = URL.createObjectURL(file);
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        sender: "user",
-        image: imageURL,
-      },
-    ]);
-
-    // Reset input so same image can be selected again
-    e.target.value = "";
-  };
-
-  /* ---------------- SEND MESSAGE ---------------- */
+  /* ---------------- SEND MESSAGE (WITH CONTEXT) ---------------- */
   const sendMessage = async (customText = null) => {
     const text = customText || input;
     if (!text.trim()) return;
 
-    const userMessage = { sender: "user", text };
-    setMessages((prev) => [...prev, userMessage]);
+    const userMessage = { sender: "user", text, role: "user" };
+    const newMessages = [...messages, userMessage];
+    
+    setMessages(newMessages);
     setInput("");
-
-    setMessages((prev) => [...prev, { sender: "bot", text: "Thinking..." }]);
+    setIsTyping(true);
 
     try {
+      const chatHistory = [
+        { 
+          role: "system", 
+          content: "You are Manas+, a precise medical AI assistant. Use bullet points for advice. Be structured and professional." 
+        },
+        ...newMessages.map(m => ({
+          role: m.sender === "user" ? "user" : "assistant",
+          content: m.text
+        }))
+      ];
+
       const res = await fetch("http://localhost:5000/api/process-text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userText: text, sessionId }),
+        body: JSON.stringify({ userText: text, sessionId, history: chatHistory }),
       });
+      
       const data = await res.json();
-      setMessages((prev) => prev.slice(0, -1));
+      setIsTyping(false);
 
-      if (data.type === "greeting")
-        setMessages((prev) => [...prev, { sender: "bot", text: data.message }]);
-      else if (data.type === "medical")
-        setMessages((prev) => [
-          ...prev,
-          { sender: "bot", text: data.remedies?.[0] || "No response" },
-        ]);
-      else
-        setMessages((prev) => [
-          ...prev,
-          { sender: "bot", text: "⚠️ Unexpected response from backend." },
-        ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev.slice(0, -1),
-        { sender: "bot", text: "⚠️ Backend not responding. Try again." },
-      ]);
+      const botResponse = data.remedies?.[0] || data.message || "I'm analyzing your concern. Please provide more details.";
+      setMessages(prev => [...prev, { sender: "bot", text: botResponse, role: "assistant" }]);
+      
+    } catch (error) {
+      setIsTyping(false);
+      setMessages(prev => [...prev, { sender: "bot", text: "⚠️ Connection error. Please try again.", isError: true }]);
     }
   };
 
-  /* ---------------- SCROLL & TEXTAREA ---------------- */
   useEffect(() => {
-    if (endRef.current) endRef.current.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height =
-        textareaRef.current.scrollHeight + "px";
-    }
-  }, [input]);
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping]);
 
   return (
-    <div className="max-w-6xl mx-auto flex flex-col h-[85vh] relative">
+    <div className="max-w-5xl mx-auto flex flex-col h-[88vh] bg-white rounded-[32px] shadow-xl border border-slate-100 relative overflow-hidden">
+      
       {/* Header */}
-      <div className="flex justify-between items-center mb-10">
-        <div>
-          <h1 className="text-3xl font-extrabold text-gray-800">
-            Chat with Manas+
-          </h1>
-          <p className="text-gray-500">
-            Your compassionate health companion — available 24/7
-          </p>
+      <div className="bg-white/90 backdrop-blur-md p-5 flex justify-between items-center border-b border-slate-50 shadow-sm z-10">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+            <BrainCircuit size={20} />
+          </div>
+          <div>
+            <h1 className="text-lg font-black text-slate-800 tracking-tight">Manas<span className="text-emerald-500">+</span></h1>
+            <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-[0.15em] flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> Always Active
+            </p>
+          </div>
         </div>
-        <button
-          className="bg-gray-100 px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-200"
-          onClick={() => setMessages([])}
-        >
-          New Conversation
+        <button onClick={() => setMessages([])} className="p-2.5 text-slate-400 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition-all">
+          <RotateCcw size={18} />
         </button>
       </div>
 
-      {/* Messages */}
-      {messages.length === 0 ? (
-        <StartingUI />
-      ) : (
-        <div className="flex-1 bg-white rounded-2xl shadow-lg p-6 border border-gray-100 overflow-y-auto">
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`my-3 flex ${
-                msg.sender === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
-              {msg.image ? (
-                <img
-                  src={msg.image}
-                  alt="uploaded"
-                  className="max-w-xs rounded-xl shadow-md border"
-                />
-              ) : (
-                <div
-                  className={`px-4 py-2 rounded-2xl max-w-lg text-lg shadow-sm whitespace-pre-line ${
-                    msg.sender === "user"
-                      ? "bg-gradient-to-r from-green-400 to-blue-400 text-white"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
-                >
-                  {msg.text}
+      {/* Message Area */}
+      <div className="flex-1 overflow-y-auto p-5 space-y-6 bg-slate-50/30">
+        {messages.length === 0 ? (
+          <StartingUI />
+        ) : (
+          messages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-3 duration-500`}>
+              <div className={`flex gap-3 max-w-[88%] ${msg.sender === "user" ? "flex-row-reverse" : ""}`}>
+                
+                {/* Updated Avatar Label to MANAS */}
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-[8px] font-black shrink-0 shadow-sm border ${
+                  msg.sender === "user" ? "bg-indigo-600 text-white border-indigo-500" : "bg-white text-emerald-500 border-slate-100"
+                }`}>
+                  {msg.sender === "user" ? "YOU" : "MANAS"}
                 </div>
-              )}
+
+                {/* Message Content */}
+                {msg.image ? (
+                  <img src={msg.image} alt="upload" className="rounded-2xl border-4 border-white shadow-md max-w-sm" />
+                ) : (
+                  <div className={`px-5 py-3.5 rounded-[22px] text-[15px] leading-relaxed shadow-sm tracking-wide ${
+                    msg.sender === "user" 
+                      ? "bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-tr-none font-medium" 
+                      : msg.isError ? "bg-red-50 text-red-600 border border-red-100" : "bg-white text-slate-700 rounded-tl-none border border-slate-100"
+                  }`}>
+                    {/* Points Formatting Style */}
+                    <div className="whitespace-pre-line prose prose-sm max-w-none">
+                      {msg.text}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          ))}
-          <div ref={endRef} />
-        </div>
-      )}
-
-      {/* Listening Popup */}
-      {listening && (
-        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 bg-white shadow-lg border border-green-200 rounded-xl p-5 w-[350px] flex flex-col items-center z-20">
-          <p className="text-gray-700 text-sm font-medium mb-2">
-            Listening...
-          </p>
-          <p className="text-gray-500 text-xs italic text-center max-w-xs">
-            {spokenText || "Speak now..."}
-          </p>
-        </div>
-      )}
-
-      {/* Input Bar */}
-      <div className="mt-6 flex items-center bg-white border-2 border-green-100 rounded-full shadow-lg px-4 py-2 relative gap-1">
-        {/* Mic */}
-        <button
-          className={`p-2 transition ${
-            listening
-              ? "text-green-600"
-              : "text-gray-500 hover:text-green-600"
-          }`}
-          onClick={toggleListening}
-        >
-          <Mic size={20} />
-        </button>
-
-        {/* Camera */}
-        <button
-          className="p-2 text-gray-500 hover:text-green-600 transition"
-          onClick={handleImageClick}
-        >
-          <Camera size={20} />
-        </button>
-
-        {/* Hidden File Input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={handleImageSelect}
-        />
-
-        {/* Textarea */}
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              sendMessage();
-            }
-          }}
-          placeholder="Describe your symptoms or health concern..."
-          rows={1}
-          className="flex-1 resize-none bg-transparent outline-none text-gray-700 px-3 py-2 overflow-y-auto"
-        />
-
-        {/* Send */}
-        <button
-          onClick={() => sendMessage()}
-          className="bg-gradient-to-r from-green-400 to-blue-400 text-white px-5 py-2 rounded-full font-semibold shadow-md hover:opacity-90 flex items-center gap-2"
-        >
-          <Send size={18} />
-        </button>
+          ))
+        )}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="bg-white px-5 py-3 rounded-2xl border border-slate-100 text-emerald-500 text-[11px] font-bold flex items-center gap-3 shadow-sm">
+              <Loader2 size={14} className="animate-spin" /> Manas is thinking...
+            </div>
+          </div>
+        )}
+        <div ref={endRef} />
       </div>
+
+      {/* Input Section */}
+      <div className="p-5 bg-white border-t border-slate-50">
+        <div className="max-w-4xl mx-auto flex items-center bg-slate-50/50 border border-slate-200 rounded-3xl px-5 py-1.5 transition-all focus-within:border-emerald-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-500/5 shadow-inner gap-2">
+          
+          <button onClick={toggleListening} className={`p-2 transition-colors ${listening ? "text-red-500 animate-pulse" : "text-slate-400 hover:text-emerald-500"}`}>
+            <Mic size={20} />
+          </button>
+
+          <button onClick={() => fileInputRef.current?.click()} className="p-2 text-slate-400 hover:text-emerald-500 transition-colors">
+            <Camera size={20} />
+          </button>
+          
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+             const file = e.target.files?.[0];
+             if (file) setMessages(prev => [...prev, { sender: "user", image: URL.createObjectURL(file) }]);
+          }} />
+
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }}}
+            placeholder="Type symptoms (e.g. fever, headache)..."
+            rows={1}
+            className="flex-1 bg-transparent outline-none text-slate-700 py-3 text-sm font-medium resize-none placeholder:text-slate-400"
+          />
+
+          <button
+            onClick={() => sendMessage()}
+            disabled={!input.trim()}
+            className="bg-emerald-500 disabled:bg-slate-200 disabled:cursor-not-allowed text-white px-4 py-2 rounded-xl hover:bg-emerald-600 transition-all shadow-md active:scale-95"
+          >
+            <Send size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Modern Voice Overlay */}
+      {listening && (
+        <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center animate-in fade-in duration-300">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
+            <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center text-white relative shadow-xl">
+              <Mic size={32} />
+            </div>
+          </div>
+          <h2 className="text-xl font-black text-slate-800 mb-2">I'm Listening</h2>
+          <p className="text-emerald-600 font-bold text-xs bg-emerald-50 px-4 py-1.5 rounded-full border border-emerald-100">{spokenText || "Speak now..."}</p>
+        </div>
+      )}
     </div>
   );
 }

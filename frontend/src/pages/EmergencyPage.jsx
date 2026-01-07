@@ -1,211 +1,245 @@
-// ✅MAIN EMERGENCY PAGE✅
-// --- imports (place at top of App.jsx if not already there) ---
-import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import React, { useState, useEffect, useRef } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { 
+  PhoneCall, Users, MapPin, Navigation, 
+  ShieldCheck, ArrowLeft, RefreshCcw, AlertCircle, Loader2
+} from "lucide-react";
 
-// ✅ Define the hospital icon once
+// Fix for default Leaflet markers
 const hospitalIcon = new L.Icon({
   iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
+  iconSize: [36, 36],
+  iconAnchor: [18, 36],
 });
 
-// ✅ Emergency Page Component
-function EmergencyPage() {
-  const [location, setLocation] = useState(null);
-  const [hospitals, setHospitals] = useState([]);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+function RecenterMap({ coords }) {
+  const map = useMap();
+  useEffect(() => {
+    if (coords) map.setView([coords.lat, coords.lng], 16);
+  }, [coords, map]);
+  return null;
+}
 
-  // Utility: compute distance between two coordinates (in km)
-  const calcDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // km
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+export default function EmergencyPage({ setPage }) {
+  const [location, setLocation] = useState(null);
+  const [address, setAddress] = useState("Determining exact location...");
+  const [hospitals, setHospitals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const [isPressing, setIsPressing] = useState(false);
+  const [pressProgress, setPressProgress] = useState(0);
+  const [sosTriggered, setSosTriggered] = useState(false);
+  const timerRef = useRef(null);
+
+  const updateLocation = () => {
+    setLoading(true);
+    setError(null);
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const currentLoc = { lat: latitude, lng: longitude };
+        setLocation(currentLoc);
+        fetchAddress(latitude, longitude);
+        fetchHospitals(currentLoc);
+        setLoading(false);
+      },
+      (err) => {
+        setLoading(false);
+        if (err.code === 1) setError("Location permission denied. Please enable GPS.");
+        else if (err.code === 2) setError("Position unavailable. Check your signal.");
+        else setError("Location timeout. Try again.");
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
   };
 
-  // ✅ Fetch location and nearby hospitals
-  useEffect(() => {
-    const getLocation = async () => {
-      if (!navigator.geolocation) {
-        setError("Geolocation not supported by this browser.");
-        await fallbackToIP();
-        return;
+  const fetchAddress = async (lat, lng) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18`);
+      const data = await res.json();
+      setAddress(data.display_name || "Address found");
+    } catch (err) {
+      setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+    }
+  };
+
+  const fetchHospitals = async (coords) => {
+    try {
+      const query = `[out:json];(node["amenity"="hospital"](around:5000,${coords.lat},${coords.lng}););out center;`;
+      const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: query });
+      const data = await res.json();
+      const results = data.elements.map(el => {
+        const lat = el.lat || el.center?.lat;
+        const lng = el.lon || el.center?.lng;
+        const R = 6371; 
+        const dLat = ((lat - coords.lat) * Math.PI) / 180;
+        const dLon = ((lng - coords.lng) * Math.PI) / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(coords.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        const dist = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+        return { name: el.tags.name || "Medical Center", lat, lng, distance: dist.toFixed(2) };
+      }).sort((a, b) => a.distance - b.distance);
+      setHospitals(results.slice(0, 5));
+    } catch (err) { console.error("Hospital Fetch Error", err); }
+  };
+
+  useEffect(() => { updateLocation(); }, []);
+
+  const startPress = () => {
+    setIsPressing(true);
+    let start = Date.now();
+    timerRef.current = setInterval(() => {
+      let elapsed = Date.now() - start;
+      let progress = (elapsed / 3000) * 100;
+      if (progress >= 100) {
+        setPressProgress(100);
+        setSosTriggered(true);
+        clearInterval(timerRef.current);
+        // Add actual emergency API call here if needed
+      } else {
+        setPressProgress(progress);
       }
+    }, 50);
+  };
 
-      const watch = navigator.geolocation.watchPosition(
-        async (pos) => {
-          const coords = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          };
-          setLocation(coords);
-          await fetchHospitals(coords);
-        },
-        async (err) => {
-          console.warn("GPS failed:", err.message);
-          setError("Using approximate location (IP-based).");
-          await fallbackToIP();
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
-        }
-      );
-
-      return () => navigator.geolocation.clearWatch(watch);
-    };
-
-    const fallbackToIP = async () => {
-      try {
-        const res = await fetch("https://ipapi.co/json/");
-        const data = await res.json();
-        const coords = { lat: data.latitude, lng: data.longitude };
-        setLocation(coords);
-        await fetchHospitals(coords);
-      } catch (err) {
-        setError("Unable to determine location.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchHospitals = async (coords) => {
-      try {
-        const query = `
-          [out:json];
-          (
-            node["amenity"="hospital"](around:5000,${coords.lat},${coords.lng});
-            way["amenity"="hospital"](around:5000,${coords.lat},${coords.lng});
-            relation["amenity"="hospital"](around:5000,${coords.lat},${coords.lng});
-          );
-          out center;
-        `;
-        const response = await fetch("https://overpass-api.de/api/interpreter", {
-          method: "POST",
-          body: query,
-        });
-        const data = await response.json();
-
-        const results = data.elements
-          .map((el) => ({
-            name: el.tags.name || "Unnamed Hospital",
-            lat: el.lat || el.center?.lat,
-            lng: el.lon || el.center?.lon,
-          }))
-          .filter((h) => h.lat && h.lng)
-          .map((h) => ({
-            ...h,
-            distance: calcDistance(coords.lat, coords.lng, h.lat, h.lng).toFixed(2),
-          }));
-
-        setHospitals(results.slice(0, 10));
-        setLoading(false);
-      } catch (err) {
-        console.error("Overpass fetch error:", err);
-        setError("Failed to fetch nearby hospitals.");
-        setLoading(false);
-      }
-    };
-
-    getLocation();
-  }, []);
+  const stopPress = () => {
+    setIsPressing(false);
+    setPressProgress(0);
+    clearInterval(timerRef.current);
+  };
 
   return (
-    <div className="max-w-5xl mx-auto bg-gradient-to-b from-white to-green-50 p-8 rounded-2xl shadow-md relative">
-      <h1 className="text-3xl font-extrabold text-gray-800 mb-8 text-center">
-        Emergency Assistance
-      </h1>
-
-      {/* Action Buttons */}
-      <div className="flex justify-center gap-6 mb-10 flex-wrap">
-        <button className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-full font-semibold text-lg shadow-md transition">
-          🚑 Call Ambulance
-        </button>
-        <button className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 px-6 py-3 rounded-full font-semibold text-lg shadow-md transition">
-          🔔 Notify Family
-        </button>
-        <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-full font-semibold text-lg shadow-md transition">
-          🩺 Notify Doctor
-        </button>
+    <div className={`min-h-screen p-4 md:p-8 transition-colors duration-500 ${sosTriggered ? 'bg-red-50' : 'bg-slate-50'}`}>
+      
+      {/* Header */}
+      <div className="max-w-6xl mx-auto flex justify-between items-center mb-6 md:mb-10">
+        <div className="flex items-center gap-4">
+          <button onClick={() => setPage("AppDesktop")} className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:bg-slate-50 transition"><ArrowLeft /></button>
+          <h1 className="text-2xl md:text-4xl font-black text-slate-900">Emergency</h1>
+        </div>
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-xs uppercase ${location ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+          <ShieldCheck size={16} /> {location ? "GPS Active" : "Searching..."}
+        </div>
       </div>
 
-      {/* Status */}
-      {loading && (
-        <p className="text-center text-gray-500 mb-6">📍 Getting your live location...</p>
-      )}
-      {error && <p className="text-center text-red-500 mb-6">⚠️ {error}</p>}
-
-      {/* Hospital Data + Map */}
-      {location && !loading && (
-        <div className="space-y-6">
-          {/* Hospital list */}
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              🏥 Nearby Hospitals
-            </h2>
-
-            {hospitals.length === 0 ? (
-              <p className="text-gray-500">No hospitals found nearby.</p>
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Address Card */}
+          <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 relative overflow-hidden">
+            <div className="flex justify-between items-start mb-4">
+              <span className="flex items-center gap-2 text-blue-600 font-black text-xs uppercase tracking-widest"><MapPin size={16}/> Current Location</span>
+              <button onClick={updateLocation} className={`text-slate-400 hover:text-blue-600 transition ${loading ? 'animate-spin' : ''}`}><RefreshCcw size={18}/></button>
+            </div>
+            {error ? (
+              <div className="flex items-center gap-2 text-red-500 font-bold">
+                <AlertCircle size={20} /> {error}
+              </div>
             ) : (
-              <ul className="text-gray-600 space-y-2 text-base">
-                {hospitals.map((h, i) => (
-                  <li key={i}>
-                    {h.name} — <span className="text-gray-400">{h.distance} km away</span>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <p className="text-lg md:text-xl font-bold text-slate-800 leading-tight mb-2">{address}</p>
+                <p className="text-xs font-mono text-slate-400">Coord: {location?.lat?.toFixed(5) || "0"}, {location?.lng?.toFixed(5) || "0"}</p>
+              </>
             )}
           </div>
 
-          {/* Live Map */}
-          <div className="h-[350px] rounded-xl overflow-hidden border border-gray-100 shadow-sm">
-            <MapContainer
-              center={[location.lat, location.lng]}
-              zoom={14}
-              style={{ height: "100%", width: "100%" }}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-
-              {/* User location */}
-              <Marker position={[location.lat, location.lng]}>
-                <Popup>You are here</Popup>
-              </Marker>
-
-              {/* Hospitals */}
-              {hospitals.map((h, i) => (
-                <Marker key={i} position={[h.lat, h.lng]} icon={hospitalIcon}>
-                  <Popup>
-                    {h.name} <br />
-                    {h.distance} km away
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
+          {/* Map Section */}
+          <div className="h-[400px] md:h-[500px] rounded-[40px] overflow-hidden border-4 border-white shadow-xl bg-slate-200 relative">
+            {location ? (
+              <MapContainer center={[location.lat, location.lng]} zoom={16} style={{ height: "100%", width: "100%" }}>
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <RecenterMap coords={location} />
+                <Marker position={[location.lat, location.lng]}><Popup>You are here</Popup></Marker>
+                {hospitals.map((h, i) => (
+                  <Marker key={i} position={[h.lat, h.lng]} icon={hospitalIcon}>
+                    <Popup><b>{h.name}</b><br/>{h.distance} km</Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 text-slate-400">
+                <Loader2 className="animate-spin mb-4" size={48} />
+                <p className="font-black animate-pulse uppercase tracking-tighter">Connecting to Satellites...</p>
+                {error && <button onClick={updateLocation} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-full font-bold">Retry GPS</button>}
+              </div>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Floating SOS button */}
-      <button className="fixed bottom-6 right-6 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-full shadow-lg w-16 h-16 flex items-center justify-center text-lg transition">
-        SOS
-      </button>
+        {/* Right Column */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <a href="tel:102" className="bg-red-500 p-6 md:p-8 rounded-[32px] text-white flex flex-col items-center hover:bg-red-600 transition shadow-lg shadow-red-200">
+              <PhoneCall size={32} className="mb-2" />
+              <span className="font-black text-xs uppercase">Ambulance</span>
+            </a>
+            <button className="bg-amber-400 p-6 md:p-8 rounded-[32px] text-slate-900 flex flex-col items-center hover:bg-amber-500 transition shadow-lg shadow-amber-100">
+              <Users size={32} className="mb-2" />
+              <span className="font-black text-xs uppercase">Family</span>
+            </button>
+          </div>
+
+          {/* Hospital List */}
+          <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm min-h-[300px]">
+            <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">Nearby Help</h2>
+            <div className="space-y-4">
+              {hospitals.length > 0 ? hospitals.map((h, i) => (
+                <div key={i} className="flex items-center justify-between group p-2 hover:bg-slate-50 rounded-2xl transition">
+                  <div className="max-w-[70%]">
+                    <p className="font-black text-slate-800 text-sm truncate">{h.name}</p>
+                    <p className="text-[10px] font-bold text-blue-500 uppercase">{h.distance} km away</p>
+                  </div>
+                  <button 
+                    onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${h.lat},${h.lng}`)} 
+                    className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition"
+                  >
+                    <Navigation size={18} />
+                  </button>
+                </div>
+              )) : (
+                <div className="space-y-4">
+                   {[1,2,3].map(i => <div key={i} className="h-12 bg-slate-100 animate-pulse rounded-xl" />)}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* SOS Button */}
+      <div className="fixed bottom-8 right-8 md:bottom-12 md:right-12 flex flex-col items-center z-[1000]">
+        <div 
+          className="relative w-28 h-28 md:w-32 md:h-32 flex items-center justify-center cursor-pointer select-none touch-none"
+          onMouseDown={startPress} onMouseUp={stopPress} onMouseLeave={stopPress}
+          onTouchStart={startPress} onTouchEnd={stopPress}
+        >
+          <svg className="absolute inset-0 w-full h-full -rotate-90">
+            <circle cx="50%" cy="50%" r="45%" stroke="#f1f5f9" strokeWidth="10" fill="transparent" />
+            <circle 
+              cx="50%" cy="50%" r="45%" stroke={sosTriggered ? "#22c55e" : "#dc2626"} strokeWidth="10" fill="transparent" 
+              strokeDasharray="283"
+              strokeDashoffset={283 - (283 * pressProgress) / 100}
+              className="transition-all duration-75 ease-linear"
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center shadow-2xl transition-all ${sosTriggered ? 'bg-green-500 scale-110' : 'bg-red-600 scale-100 active:scale-95'} text-white`}>
+            {sosTriggered ? <ShieldCheck size={40} /> : <span className="font-black text-xl md:text-2xl text-white">SOS</span>}
+          </div>
+        </div>
+        {isPressing && !sosTriggered && (
+          <p className="mt-4 font-black text-[10px] text-red-600 uppercase animate-bounce">
+            Keep Holding...
+          </p>
+        )}
+      </div>
     </div>
   );
 }
-
-export default EmergencyPage;
