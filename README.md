@@ -1,4 +1,4 @@
-# 🩺 Manas+ — AI Health Companion
+#  Manas+ — AI Health Companion
 
 **Manas+** is a full-stack AI-powered health companion built with **React, Node.js, Firebase**, and **LLaMA 3 (via Ollama)**.  
 It combines empathetic AI chat, health monitoring features, user profiles, and a clean modern UI — designed for extensibility with authentication, subscriptions, and real-world deployment in mind.
