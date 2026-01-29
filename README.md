@@ -5,24 +5,24 @@ It combines empathetic AI chat, health monitoring features, user profiles, and a
 
 ---
 
-## 🌸 Features
+##  Features
 
-- 💬 **AI Chat Assistant** — Friendly, empathetic health conversations  
-- 🧠 **LLaMA 3 (Ollama)** — Local AI inference (no external API keys required)  
-- 🔐 **Authentication System (Temporary)**  
+-  **AI Chat Assistant** — Friendly, empathetic health conversations  
+-  **LLaMA 3 (Ollama)** — Local AI inference (no external API keys required)  
+-  **Authentication System (Temporary)**  
   - Admin login (full access)  
   - Guest mode (limited access)  
-- 🔒 **Feature Locking for Guests** — Only Chat & Profile accessible  
-- 👤 **Professional Profile Page** — Account type, plan, billing placeholders  
-- 🧾 **Subscription Flow (UI Ready)** — Payment page placeholder  
-- 🕒 **Chat History & Profiles** — Firebase-ready backend structure  
-- 🌐 **Modern UI** — React + TailwindCSS + Lucide icons  
+-  **Feature Locking for Guests** — Only Chat & Profile accessible  
+-  **Professional Profile Page** — Account type, plan, billing placeholders  
+-  **Subscription Flow (UI Ready)** — Payment page placeholder  
+-  **Chat History & Profiles** — Firebase-ready backend structure  
+-  **Modern UI** — React + TailwindCSS + Lucide icons  
 
 ---
 
-## 🔑 Authentication (Testing Only)
+##  Authentication (Testing Only)
 
-> ⚠️ **Temporary hard-coded auth for development & UI testing**
+>  **Temporary hard-coded auth for development & UI testing**
 
 ### Admin Login
 ```
@@ -33,17 +33,17 @@ Password: admin123
 ### Guest Mode
 - Click **“Continue without account”**
 - Access limited to:
-  - ✅ Chat
-  - ✅ Profile
+  -  Chat
+  -  Profile
 - Other features redirect to **Subscription Required** page
 
-> 🔐 This will later be replaced with Firebase Auth / Clerk.
+>  This will later be replaced with Firebase Auth / Clerk.
 
 ---
 
-## ⚙️ Setup Instructions
+##  Setup Instructions
 
-### 🪄 Step 1: Prerequisites
+###  Step 1: Prerequisites
 
 | Tool | Version |
 |-----|--------|
@@ -54,7 +54,7 @@ Password: admin123
 
 ---
 
-### 🤖 Step 2: Install & Run LLaMA 3
+###  Step 2: Install & Run LLaMA 3
 
 ```bash
 ollama pull llama3
@@ -65,7 +65,7 @@ Keep Ollama running — it powers the Manas+ AI backend.
 
 ---
 
-### 🔥 Step 3: Firebase Setup (Backend Ready)
+###  Step 3: Firebase Setup (Backend Ready)
 
 1. Firebase Console → Project Settings → Service Accounts  
 2. Generate **Admin SDK private key**
@@ -81,7 +81,7 @@ Keep Ollama running — it powers the Manas+ AI backend.
 
 ---
 
-### 🧠 Step 4: Backend Setup
+###  Step 4: Backend Setup
 
 ```bash
 cd backend
@@ -96,7 +96,7 @@ http://localhost:5000
 
 ---
 
-### 💻 Step 5: Frontend Setup
+###  Step 5: Frontend Setup
 
 ```bash
 cd frontend
@@ -111,7 +111,7 @@ http://localhost:5173
 
 ---
 
-## 🧩 Project Structure (Simplified)
+##  Project Structure (Simplified)
 
 ```
 manas-plus-project/
@@ -136,7 +136,7 @@ manas-plus-project/
 
 ---
 
-## 🚧 Current Limitations
+##  Current Limitations
 
 - Temporary hard-coded authentication
 - Payment flow is UI-only
@@ -145,13 +145,13 @@ manas-plus-project/
 
 ---
 
-## 🌐 Live Frontend
+##  Live Frontend
 
-👉 https://manas-plus.netlify.app/
+ https://manas-plus.netlify.app/
 
 ---
 
-## 🔐 Security Notes
+##  Security Notes
 
 - Never commit Firebase Admin SDK keys
 - Ollama runs fully offline
@@ -168,4 +168,4 @@ manas-plus-project/
 
 ---
 
-✨ Built with care by Mayank Rana & Mukul
+Built by Mayank Rana & Mukul
