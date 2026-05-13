@@ -12,6 +12,8 @@ import {
   Users,
   AlertTriangle,
   Lock,
+  Menu,
+  X,
 } from "lucide-react";
 
 import NavButton from "./components/NavButton";
@@ -33,6 +35,7 @@ import PaymentPage from "./pages/PaymentPage";
 export default function App() {
   const [page, setPage] = useState("chat");
   const [auth, setAuth] = useState(null); // null | admin | guest
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     const savedAuth = localStorage.getItem("manas_auth");
@@ -57,8 +60,28 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex bg-gradient-to-b from-white to-green-50 font-sans">
+      {/* Mobile Header */}
+      <div className="fixed top-0 left-0 right-0 h-16 bg-white shadow-sm flex items-center justify-between px-4 z-40 md:hidden">
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-br from-green-400 to-blue-400 p-2 rounded-xl shadow-sm">
+            <Heart className="text-white" size={20} />
+          </div>
+          <h1 className="text-xl font-extrabold text-gray-800">Manas+</h1>
+        </div>
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <Menu size={24} />
+        </button>
+      </div>
+
       {/* Sidebar */}
-      <aside className="w-72 bg-white shadow-md flex flex-col justify-between p-6 border-r border-gray-100">
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-md flex flex-col justify-between p-6 border-r border-gray-100 transform transition-transform duration-300 ease-in-out
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:relative md:translate-x-0
+      `}>
         <div>
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
@@ -77,55 +100,55 @@ export default function App() {
               label="Chat"
               icon={<MessageSquare size={20} />}
               active={page === "chat"}
-              onClick={() => setPage("chat")}
+              onClick={() => { setPage("chat"); setIsSidebarOpen(false); }}
             />
 
             <NavButton
               label="Monitor"
               icon={<Activity size={20} />}
-              onClick={() => goOrPay("monitor")}
+              onClick={() => { goOrPay("monitor"); setIsSidebarOpen(false); }}
               locked={isGuest}
             />
 
             <NavButton
               label="Pill"
               icon={<Pill size={20} />}
-              onClick={() => goOrPay("pill")}
+              onClick={() => { goOrPay("pill"); setIsSidebarOpen(false); }}
               locked={isGuest}
             />
 
             <NavButton
               label="Fitness"
               icon={<Dumbbell size={20} />}
-              onClick={() => goOrPay("fitness")}
+              onClick={() => { goOrPay("fitness"); setIsSidebarOpen(false); }}
               locked={isGuest}
             />
 
             <NavButton
               label="Doctor"
               icon={<Stethoscope size={20} />}
-              onClick={() => goOrPay("doctor")}
+              onClick={() => { goOrPay("doctor"); setIsSidebarOpen(false); }}
               locked={isGuest}
             />
 
             <NavButton
               label="Elder"
               icon={<Users size={20} />}
-              onClick={() => goOrPay("elder")}
+              onClick={() => { goOrPay("elder"); setIsSidebarOpen(false); }}
               locked={isGuest}
             />
 
             <NavButton
               label="Emergency"
               icon={<AlertTriangle size={20} />}
-              onClick={() => goOrPay("emergency")}
+              onClick={() => { goOrPay("emergency"); setIsSidebarOpen(false); }}
               locked={isGuest}
             />
 
             <NavButton
               label="History"
               icon={<History size={20} />}
-              onClick={() => goOrPay("history")}
+              onClick={() => { goOrPay("history"); setIsSidebarOpen(false); }}
               locked={isGuest}
             />
 
@@ -133,7 +156,7 @@ export default function App() {
             <NavButton
               label="Profile"
               icon={<User size={20} />}
-              onClick={() => setPage("profile")}
+              onClick={() => { setPage("profile"); setIsSidebarOpen(false); }}
               locked={false}
             />
           </nav>
@@ -152,10 +175,26 @@ export default function App() {
           <UserCircle2 className="text-green-600" size={18} />
           {isGuest ? "Guest Mode" : "Admin Access"}
         </div>
+
+        {/* Close button for mobile */}
+        <button
+          onClick={() => setIsSidebarOpen(false)}
+          className="absolute top-6 right-4 p-2 text-gray-400 hover:text-gray-600 md:hidden"
+        >
+          <X size={24} />
+        </button>
       </aside>
 
+      {/* Overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Main */}
-      <main className="flex-1 p-12 overflow-auto">
+      <main className="flex-1 p-4 md:p-12 overflow-auto pt-20 md:pt-12">
         {page === "chat" && <ChatPage />}
         {page === "monitor" && <MonitorPage />}
         {page === "pill" && <PillPage />}
