@@ -3,14 +3,19 @@ import express from "express";
 import cors from "cors";
 import fs from "fs";
 import admin from "firebase-admin";
-import fetch from "node-fetch";
+import Groq from "groq-sdk";
 import dotenv from "dotenv";
-import readline from "readline";
+
 
 dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// ✅ Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: Date.now() });
+});
 
 // ✅ Initialize Firebase using .env for safety
 try {
@@ -37,9 +42,11 @@ const db = admin.firestore();
 const chatsRef = db.collection("chats");
 const profilesRef = db.collection("profiles");
 
-const MODEL = "llama3:latest";
-const OLLAMA_API = "http://localhost:11434/api/generate";
-console.log("🤖 Connected model:", MODEL);
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
+const MODEL = "llama-3.3-70b-versatile";
+console.log("🤖 Connected to Groq model:", MODEL);
 
 // ✅ Emoji-based text enhancer
 function enhanceWithEmojis(text) {
@@ -83,45 +90,34 @@ app.post("/api/process-text", async (req, res) => {
   }
 
   try {
-    console.log("🧠 Sending request to Ollama...");
+    console.log("🧠 Sending request to Groq...");
 
-    const response = await fetch(OLLAMA_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: MODEL,
-        prompt: `You are Manas+, a caring healthcare assistant.
-Write naturally (no markdown, no asterisks).
-Be warm and friendly. Use short sentences. Add gentle reassurance.
-Organize the response into:
-1. Short intro sentence of empathy.
-2. Probable causes (with simple bullet points).
-3. Helpful remedies or lifestyle suggestions.
-4. A clear note about when to see a doctor.
+const completion = await groq.chat.completions.create({
+    model: MODEL,
+    messages: [
+      {
+        role: "system",
+        content: `You are Manas+, a caring healthcare assistant.
+  Write naturally (no markdown, no asterisks).
+  Be warm and friendly. Use short sentences. Add gentle reassurance.
+  Organize the response into:
+  1. Short intro sentence of empathy.
+  2. Probable causes (with simple bullet points).
+  3. Helpful remedies or lifestyle suggestions.
+  4. A clear note about when to see a doctor.`,
+      },
+      {
+        role: "user",
+        content: userText,
+      },
+    ],
+    temperature: 0.7,
+    max_tokens: 700,
+  });
 
-User: ${userText}
-Response:`,
-      }),
-    });
-
-    if (!response.ok || !response.body) {
-      throw new Error("Invalid Ollama response or empty body.");
-    }
-
-    const rl = readline.createInterface({ input: response.body, crlfDelay: Infinity });
-    let botReply = "";
-
-    for await (const line of rl) {
-      if (!line.trim()) continue;
-      try {
-        const json = JSON.parse(line);
-        if (json.response) botReply += json.response;
-      } catch {
-        // Ignore broken JSON chunks
-      }
-    }
-
-    botReply = botReply.trim() || "I'm sorry, I couldn’t process that right now. Please try again.";
+  let botReply =
+    completion.choices?.[0]?.message?.content ||
+    "I'm sorry, I couldn’t process that right now. Please try again.";
     const enhancedReply = enhanceWithEmojis(botReply);
 
     await chatsRef.add({
@@ -138,11 +134,11 @@ Response:`,
       remedies: [enhancedReply],
     });
   } catch (error) {
-    console.error("❌ Ollama Error:", error);
+    console.error("❌ Inference Error:", error);
     res.status(500).json({
       type: "error",
       classification: "Error",
-      remedies: ["AI model not responding. Please ensure Ollama is running."],
+      remedies: ["AI model not responding right now. Please try again shortly."],
     });
   }
 });
