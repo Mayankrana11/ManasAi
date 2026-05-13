@@ -6,6 +6,9 @@ import {
   Sparkles
 } from "lucide-react";
 
+
+const BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
 /**
  * HISTORY PAGE - UPDATED FOR THREADED CONVERSATIONS
  * Groups flat message pairs into a single continuous chat session.
@@ -23,7 +26,9 @@ function HistoryPage() {
       try {
         setLoading(true);
         // Fetching from your specific endpoint
-        const res = await fetch(`http://localhost:5000/api/history/${sessionId}`);
+        const res = await fetch(
+          `${BASE_URL}/api/history/${sessionId}`
+        );
         const data = await res.json();
         
         // We assume the backend returns messages in order; we reverse for "newest first" view
